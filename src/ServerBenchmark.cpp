@@ -129,7 +129,7 @@ int redirectProgRoundRobin(std::vector<int>& cpus, std::string& ifname, __u16 po
     if (bpf_map_lookup_elem(rxCtrFd, &key0, &rxValue)) exit(1);
 
     /* DISPLAY */
-    system("clear");
+    //system("clear");
     std::cout << "\nCycle Summary. Iter N° " << time << " out of " << duration << "\n";
     std::cout << "\tAvg. queuing delays\n";
 

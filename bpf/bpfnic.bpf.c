@@ -317,7 +317,28 @@ int bpf_redirect_roundrobin(struct xdp_md *ctx)
 	}
 
 	// TODO: make redirection decision
-	return XDP_DROP;
+	cpu_iterator = bpf_map_lookup_elem(&cpu_iter, &key0);
+	if (!cpu_iterator) { // retrieve ?
+		return XDP_DROP;
+	}
+	cpu_count = bpf_map_lookup_elem(&cpus_count, &key0);
+	if (!cpu_count) { // retrieve CPU count
+		return XDP_DROP;
+	}
+	cpu_dest = *cpu_iterator % *cpu_count;
+	// It seems that CPU 0 is always unavailable, potentially for some default
+	// task, see https://edstem.org/eu/courses/1650/discussion/132540.
+	cpu_dest += (__u32) (cpu_dest == 0);
+
+	cpu_selected = bpf_map_lookup_elem(&cpus_available, &cpu_dest);
+	if (!cpu_selected || *cpu_selected == 0) {
+		return XDP_ABORTED;
+	}
+	if (bpf_redirect_map(&cpu_map, cpu_dest, 0) != XDP_REDIRECT) {
+		return XDP_ABORTED;
+	}
+	*cpu_iterator = (*cpu_iterator + 1) % *cpu_count;
+	return XDP_REDIRECT;
 }
 
 /* array of cpus available for processing long requests */
