@@ -124,7 +124,7 @@ lab.
 
  * `client_bimodal.sh`: This script sends a traffic pattern with requests that
    will be processed by the backend server, and have a either a short service
-   time (1 us) or a longer service time (around 10 us). 90% of the sent requests
+   time (10 us) or a longer service time (around 100 us). 90% of the sent requests
    will be short, while the remaining 10% will be long.
  
  * `client_debug.sh`: This script sends bimodal traffic at a reduced and 
