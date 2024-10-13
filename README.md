@@ -308,7 +308,7 @@ earlier from a separate terminal.
 
 The client benchmark in unimodal and bimodal mode will run the experiment for 30 
 seconds, where it will increase load exponentially at an interval of 5 seconds. 
-The provided server script for this benchmark (`server_default_rrcs.sh`) 
+The provided server script for this benchmark (`server_default_dynamic_alloc.sh`) 
 attaches the XDP programs for 60 seconds before detaching. This can be 
 configured via the option `-d`. For more information, consult `./bpfnic --help`.
 

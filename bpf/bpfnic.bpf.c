@@ -398,7 +398,61 @@ int bpf_redirect_roundrobin_core_separated(struct xdp_md *ctx)
 		return XDP_PASS;
 
 	// TODO: make redirection decision
-	return XDP_DROP;
+	packet = (struct packet*) nh.pos;
+	if (packet + 1 > data_end) {
+		return XDP_DROP;
+	}
+
+	__u32 cpu_start = 0;
+	if (packet->data >= 10)
+	{
+		cpu_iterator_long = bpf_map_lookup_elem(&cpu_iter_core_separated, &key1);
+		if (!cpu_iterator_long) {
+			return XDP_DROP;
+		}
+		cpu_start = *cpu_iterator_long;
+
+		cpu_count_long = bpf_map_lookup_elem(&cpu_count_core_separated, &key1);
+		if (!cpu_count_long) {
+			return XDP_DROP;
+		}
+		cpu_dest = *cpu_iterator_long % *cpu_count_long;
+		//cpu_dest += (__u32) (cpu_dest == 0);
+
+		cpu_selected = bpf_map_lookup_elem(&cpus_available_long_reqs, &cpu_dest);
+		if (!cpu_selected || *cpu_selected == 0) {
+			return XDP_ABORTED;
+		}
+		if (bpf_redirect_map(&cpu_map, cpu_dest, 0) != XDP_REDIRECT) {
+			return XDP_ABORTED;
+		}
+		*cpu_iterator_long = (*cpu_iterator_long - cpu_start + 1) % *cpu_count_long + cpu_start;
+	}
+	else
+	{
+		cpu_iterator_short = bpf_map_lookup_elem(&cpu_iter_core_separated, &key0);
+		if (!cpu_iterator_short) {
+			return XDP_DROP;
+		}
+		cpu_start = *cpu_iterator_short;
+		
+		cpu_count_short = bpf_map_lookup_elem(&cpu_count_core_separated, &key0);
+		if (!cpu_count_short) {
+			return XDP_DROP;
+		}
+		cpu_dest = *cpu_iterator_short % *cpu_count_short;
+		cpu_dest += (__u32) (cpu_dest == 0);
+
+		cpu_selected = bpf_map_lookup_elem(&cpus_available_short_reqs, &cpu_dest);
+		if (!cpu_selected || *cpu_selected == 0) {
+			return XDP_ABORTED;
+		}
+		if (bpf_redirect_map(&cpu_map, cpu_dest, 0) != XDP_REDIRECT) {
+			return XDP_ABORTED;
+		}
+		*cpu_iterator_short = (*cpu_iterator_short - cpu_start + 1) % *cpu_count_short + cpu_start;
+	}
+	return XDP_REDIRECT;
 }
 
 SEC("tc")

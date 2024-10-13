@@ -302,7 +302,7 @@ int redirectProgRoundRobinCoreSeparated(std::vector<int>& cpusShort, std::vector
     if (bpf_map_lookup_elem(rxCtrFd, &key0, &rxValue)) exit(1);
 
     /* DISPLAY */
-    system("clear");
+    //system("clear");
     std::cout << "\nCycle Summary. Iter N° " << time << " out of " << duration << "\n";
 
     std::cout << "Short core group = [ ";
@@ -359,6 +359,7 @@ int redirectProgRoundRobinCoreSeparated(std::vector<int>& cpusShort, std::vector
 
 #define MAX_CPUS 8
 #define MIN_CPUS 1
+constexpr double QD_THRESHOLD{ 50.0 };
 
 /// adds one CPU to the core group
 void addOneCPU(int countFd) {
@@ -367,6 +368,13 @@ void addOneCPU(int countFd) {
   if (bpf_map_lookup_elem(countFd, &key0, &cpuCount)) exit(1);
 
   // TODO: Code to add a CPU
+  if (cpuCount < MAX_CPUS) [[likely]]
+  {
+    cpuCount++;
+    if (bpf_map_update_elem(countFd, &key0, &cpuCount, 0)) [[unlikely]] {
+      exit(1);
+    }
+  }
   // cpuCount after lookup will contain the current value
 }
 
@@ -377,6 +385,13 @@ void removeOneCPU(int countFd) {
   if (bpf_map_lookup_elem(countFd, &key0, &cpuCount)) exit(1);
 
   // TODO: Code to remove a CPU
+  if (cpuCount > MIN_CPUS) [[likely]]
+  {
+    cpuCount--;
+    if (bpf_map_update_elem(countFd, &key0, &cpuCount, 0)) [[unlikely]] {
+      exit(1);
+    }
+  }
   // cpuCount after lookup will contain the current value
 }
 
@@ -492,7 +507,7 @@ int redirectProgDynamicCoreAllocation(std::vector<int>& availCpus, std::string& 
     if (bpf_map_lookup_elem(rxCtrFd, &key0, &rxValue)) exit(1);
 
     /* DISPLAY */
-    system("clear");
+    //system("clear");
     std::cout << "\nCycle Summary. Iter N° " << time << " out of " << duration << "\n";
     std::cout << "Core group size = " << cpusCount << "\n";
     std::cout << "\tAvg. queuing delays\n";
@@ -507,6 +522,12 @@ int redirectProgDynamicCoreAllocation(std::vector<int>& availCpus, std::string& 
 
     // BEGIN: CORE ADDITION LOGIC
     // TODO: Add logic to observe queueing delay and add cores
+    double avgQD{ computeAverageQueuingDelay(totalSrvTimeFd, txCtrFd) / 1000.0 };
+    if (avgQD > QD_THRESHOLD) {
+      addOneCPU(countFd);
+    } else {
+      removeOneCPU(countFd);
+    }
     // END: CORE ADDITION LOGIC
 
     // clear arrays - state is kept per-window
